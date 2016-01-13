@@ -10,6 +10,7 @@ A ClojureScript implementation of `alter-var-root`.
 
 ```clojure
 (ns my-ns
+  #?(:clj (:refer-clojure :exclude [alter-var-root]))
   (#?(:clj :require :cljs :require-macros) [alter-cljs.core :refer [alter-var-root]]))
 
 (alter-var-root whatever
