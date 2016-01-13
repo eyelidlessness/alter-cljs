@@ -2,6 +2,10 @@
 
 A ClojureScript implementation of `alter-var-root`.
 
+```clojure
+[alter-cljs "0.1.0"]
+```
+
 ## Usage
 
 ```clojure
