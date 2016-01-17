@@ -45,15 +45,21 @@
         (:form init) (recur (:env init) (:form init))
         :else nil)))
 
+(def sentinel nil)
+
 (defmacro alter-var-root [var-ref f]
   (let [var-seq? (and (seq? var-ref) (= 'var (first var-ref)))
         sym? (symbol? var-ref)
-        var-sym (cond
-                  var-seq? (second var-ref)
-                  sym? (sym->var &env var-ref)
-                  :else nil)]
-    (if (nil? var-sym)
-        `(throw (ex-info "Expected var" {:got ~var-ref}))
-        `(if-cljs
+        var-sym (or (cond
+                      var-seq? (second var-ref)
+                      sym? (sym->var &env var-ref)
+                      :else nil)
+                    'alter-cljs.core/sentinel)
+        var-sym? (not= var-sym 'alter-cljs.core/sentinel) #_(boolean (not (nil? var-sym)))]
+    `(if-cljs
+       (if ~var-sym?
            (set! ~var-sym (~f ~var-sym))
-           (clojure.core/alter-var-root (var ~var-sym) ~f)))))
+           (throw (ex-info "Expected var" {:got ~var-ref})))
+       (if ~var-sym?
+           (clojure.core/alter-var-root (var ~var-sym) ~f)
+           (clojure.core/alter-var-root ~var-ref ~f)))))
