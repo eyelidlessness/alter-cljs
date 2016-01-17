@@ -8,7 +8,26 @@
 
 (def some-var :original)
 
-(def ex-type #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo))
+(def ex-type #?(:clj java.lang.Exception :cljs ExceptionInfo))
+
+(defn base-fn [] 0)
+
+(defn var->sym [v]
+  (let [{:keys [ns name]} (meta v)]
+    (symbol (str (ns-name ns)) (str name))))
+
+(defn wrap-fn! [v wrapper]
+  (let [pair (map var->sym [v wrapper])]
+    (when-not (= pair (-> v meta ::wrapped))
+      (alter-var-root v
+        (fn [original]
+          (fn [& args]
+            (apply @wrapper original args))))
+      (alter-meta! v #(assoc % ::wrapped pair)))
+      nil))
+
+(defn inc-wrapper [original]
+  (inc (original)))
 
 (describe "alter-var-root compatibility"
   (it "alters the var"
@@ -61,4 +80,9 @@
       (should-throw ex-type
         (alter-var-root 0 identity))
       (should-throw ex-type
-        (alter-var-root "a" identity)))))
+        (alter-var-root "a" identity))))
+
+  (it "alters a var passed to a function as an argument"
+    (do
+      (wrap-fn! #'base-fn #'inc-wrapper)
+      (should= (base-fn) 1))))
