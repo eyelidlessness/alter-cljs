@@ -7,59 +7,40 @@
   [then else]
   (if (:ns &env) then else))
 
-(def resolve-clj
-  (try clojure.core/resolve
-    (catch Exception _
-      (constantly nil))))
+(defn var-seq? [x]
+  (and (list? x) (= 'var (first x)) (symbol? (second x))))
 
-(defmulti sym->var
-  (fn [env sym]
-    (cond
-      (contains? env sym) :clj
-      (resolve-clj sym) :clj-resolved
-      :else :cljs)))
-
-(defn meta->fq-sym [{:keys [ns name] :as m}]
-  (symbol (str (ns-name ns)) (str name)))
-
-(defmethod sym->var :clj [env sym]
-  (loop [init (-> env sym .-init)]
-    (cond
-      (instance? clojure.lang.Compiler$TheVarExpr init)
-      (-> init .-var meta meta->fq-sym)
-
-      (instance? clojure.lang.Compiler$LocalBindingExpr init)
-      (recur (-> init .-b .-init))
-
-      :default
-      nil)))
-
-(defmethod sym->var :clj-resolved [env sym]
-  (-> sym resolve meta meta->fq-sym))
-
-(defmethod sym->var :cljs [env sym]
+(defn resolve-cljs-sym [env sym]
   (let [init (get-in env [:locals sym :init])
-        var-name (get-in init [:var :info :name])]
-      (cond
-        var-name var-name
-        (:form init) (recur (:env init) (:form init))
-        :else nil)))
+        form (:form init)]
+    (cond
+      (var-seq? form) (second form)
+      form (recur (:env init) form)
+      :else nil)))
 
-(def sentinel nil)
+(defmacro alter-var-root [x f]
+  (let [var-seq? (var-seq? x)
+        sym? (symbol? x)
+        var-sym (cond
+                  var-seq? (second x)
+                  sym? (resolve-cljs-sym &env x)
+                  :else nil)
+        var-sym? (not (nil? var-sym))
+        altered (list f var-sym)
+        with-var-sym (when var-sym?
+                       (list 'set! var-sym altered))
+        throw* `(throw (ex-info "Expected var" {:got '~x}))
 
-(defmacro alter-var-root [var-ref f]
-  (let [var-seq? (and (seq? var-ref) (= 'var (first var-ref)))
-        sym? (symbol? var-ref)
-        var-sym (or (cond
-                      var-seq? (second var-ref)
-                      sym? (sym->var &env var-ref)
-                      :else nil)
-                    'alter-cljs.core/sentinel)
-        var-sym? (not= var-sym 'alter-cljs.core/sentinel) #_(boolean (not (nil? var-sym)))]
+        [m ns-obj munged-name] (map gensym ["m" "ns-obj" "munged-name"])
+        js-assign (list 'let [m (list 'meta x)
+                              ns-obj (list '-> m :ns 'find-ns '.-obj)
+                              munged-name (list '-> m :name 'munge)]
+                    (list 'js* "~{}[~{}] = ~{}.call(null, ~{}[~{}])"
+                               ns-obj munged-name f ns-obj munged-name))
+        cljs-assign (list 'try
+                      (list 'if var-sym? with-var-sym js-assign)
+                      (list 'catch :default (gensym)
+                        throw*))]
     `(if-cljs
-       (if ~var-sym?
-           (set! ~var-sym (~f ~var-sym))
-           (throw (ex-info "Expected var" {:got ~var-ref})))
-       (if ~var-sym?
-           (clojure.core/alter-var-root (var ~var-sym) ~f)
-           (clojure.core/alter-var-root ~var-ref ~f)))))
+       ~cljs-assign
+       (clojure.core/alter-var-root ~x ~f))))

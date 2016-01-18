@@ -16,14 +16,14 @@
   (let [{:keys [ns name]} (meta v)]
     (symbol (str (ns-name ns)) (str name))))
 
-(defn wrap-fn! [v wrapper]
-  (let [pair (map var->sym [v wrapper])]
-    (when-not (= pair (-> v meta ::wrapped))
-      (alter-var-root v
+(defn wrap-fn! [var-ref wrapper]
+  (let [pair (map var->sym [var-ref wrapper])]
+    (when-not (= pair (-> var-ref meta ::wrapped))
+      (alter-var-root var-ref
         (fn [original]
           (fn [& args]
             (apply @wrapper original args))))
-      (alter-meta! v #(assoc % ::wrapped pair)))
+      (alter-meta! var-ref #(assoc % ::wrapped pair)))
       nil))
 
 (defn inc-wrapper [original]
@@ -41,18 +41,6 @@
       (fn [original]
         [original :modified-again]))
     (should= some-var [[:original :modified] :modified-again]))
-
-  (it "alters a var named by symbol"
-    (alter-var-root alter-cljs.core-test/some-var
-      (fn [original]
-        [(first original) :modified-by-fq-sym]))
-    (should= some-var [[:original :modified] :modified-by-fq-sym]))
-
-  (it "alters a var named by symbol without specifying the namespace"
-    (alter-var-root some-var
-      (fn [original]
-        [(first original) :modified-by-sym]))
-    (should= some-var [[:original :modified] :modified-by-sym]))
 
   (it "alters a var bound to a symbol"
     (let [some-var-ref #'some-var]
