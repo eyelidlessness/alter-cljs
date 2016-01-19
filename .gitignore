@@ -9,4 +9,6 @@ pom.xml.asc
 /.nrepl-port
 .hgignore
 .hg/
-resources/js
+resources/whitespace
+resources/simple
+resources/advanced

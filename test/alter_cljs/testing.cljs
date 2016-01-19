@@ -9,7 +9,7 @@
 (defn ^:export progress-reporter []
   (new-progress-reporter))
 
-(defn ^:export run []
+(defn ^:export run [color?]
   (let [original #'dynamically-invoke]
     (set! dynamically-invoke
       (fn dynamically-invoke [ns-name fn-name]
@@ -20,5 +20,5 @@
   (set! armed true)
 
   (run-specs
-    :color true
+    :color color?
     :reporter "progress"))

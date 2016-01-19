@@ -11,7 +11,9 @@ p.onConsoleMessage = function (x) {
 p.injectJs(phantom.args[0]);
 
 var result = p.evaluate(function () {
-    alter_cljs.testing.run();
+    if (typeof alter_cljs !== 'undefined') {
+        alter_cljs.testing.run(true);
+    }
 });
 
 p.close();
