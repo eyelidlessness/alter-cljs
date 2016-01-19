@@ -10,12 +10,17 @@
   :profiles {:dev {:dependencies [[speclj "3.3.1"]]
                    :plugins [[lein-cljsbuild "1.1.2"]
                              [speclj "3.3.1"]]
+                   :clean-targets ^{:protect false} [:target-path
+                                                     "resources/js"]
                    :cljsbuild {:builds [{:source-paths ["src" "test"]
-                                         :compiler {:output-to "target/cljsbuild/alter-cljs.js"
-                                                    :optimizations :whitespace}
+                                         :compiler {:output-to "resources/js/alter-cljs.js"
+                                                    :output-dir "resources/js"
+                                                    :optimizations :advanced
+                                                    ; :optimizations :whitespace
+                                                    :source-map "resources/js/alter-cljs.js.map"}
                                          :notify-command ["phantomjs"
                                                           "test/phantomjs_runner.js"
-                                                          "target/cljsbuild/alter-cljs.js"]}]
+                                                          "resources/js/alter-cljs.js"]}]
                                :test-commands {"test" ["phantomjs"
                                                        "test/phantomjs_runner.js"
-                                                       "target/cljsbuild/alter-cljs.js"]}}}})
+                                                       "resources/js/alter-cljs.js"]}}}})

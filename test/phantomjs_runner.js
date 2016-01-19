@@ -11,10 +11,7 @@ p.onConsoleMessage = function (x) {
 p.injectJs(phantom.args[0]);
 
 var result = p.evaluate(function () {
-    speclj.run.standard.armed = true;
-    return speclj.run.standard.run_specs(
-        cljs.core.keyword('color'), true
-    );
+    alter_cljs.testing.run();
 });
 
 p.close();
