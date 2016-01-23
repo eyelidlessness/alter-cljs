@@ -1,4 +1,4 @@
-(defproject alter-cljs "0.1.1-SNAPSHOT"
+(defproject alter-cljs "0.2.0"
   :description "A ClojureScript implementation of alter-var-root"
   :url "https://github.com/eyelidlessness/alter-cljs"
   :license {:name "WTFPL v2"
