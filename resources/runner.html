@@ -1,0 +1,6 @@
+<script>
+document.write('<' + 'script src="\/'
+    + location.search.match(/\?build=(.*)/)[1]
+    + '\/build.js"><\/script>');
+</script>
+<script>alter_cljs.testing.run()</script>
