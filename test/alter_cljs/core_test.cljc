@@ -8,7 +8,26 @@
 
 (def some-var :original)
 
-(def ex-type #?(:clj clojure.lang.ExceptionInfo :cljs ExceptionInfo))
+(def ex-type #?(:clj java.lang.Exception :cljs ExceptionInfo))
+
+(defn base-fn [] 0)
+
+(defn var->sym [v]
+  (let [{:keys [ns name]} (meta v)]
+    (symbol (str (ns-name ns)) (str name))))
+
+(defn wrap-fn! [var-ref wrapper]
+  (let [pair (map var->sym [var-ref wrapper])]
+    (when-not (= pair (-> var-ref meta ::wrapped))
+      (alter-var-root var-ref
+        (fn [original]
+          (fn [& args]
+            (apply @wrapper original args))))
+      (alter-meta! var-ref #(assoc % ::wrapped pair)))
+      nil))
+
+(defn inc-wrapper [original]
+  (inc (original)))
 
 (describe "alter-var-root compatibility"
   (it "alters the var"
@@ -22,18 +41,6 @@
       (fn [original]
         [original :modified-again]))
     (should= some-var [[:original :modified] :modified-again]))
-
-  (it "alters a var named by symbol"
-    (alter-var-root alter-cljs.core-test/some-var
-      (fn [original]
-        [(first original) :modified-by-fq-sym]))
-    (should= some-var [[:original :modified] :modified-by-fq-sym]))
-
-  (it "alters a var named by symbol without specifying the namespace"
-    (alter-var-root some-var
-      (fn [original]
-        [(first original) :modified-by-sym]))
-    (should= some-var [[:original :modified] :modified-by-sym]))
 
   (it "alters a var bound to a symbol"
     (let [some-var-ref #'some-var]
@@ -61,4 +68,9 @@
       (should-throw ex-type
         (alter-var-root 0 identity))
       (should-throw ex-type
-        (alter-var-root "a" identity)))))
+        (alter-var-root "a" identity))))
+
+  (it "alters a var passed to a function as an argument"
+    (do
+      (wrap-fn! #'base-fn #'inc-wrapper)
+      (should= 1 (base-fn)))))
