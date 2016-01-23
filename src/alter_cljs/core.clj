@@ -29,16 +29,18 @@
         altered (list f var-sym)
         with-var-sym (when var-sym?
                        (list 'set! var-sym altered))
+
         throw* `(throw (ex-info "Expected var" {:got '~x}))
 
-        [m ns-obj munged-name] (map gensym ["m" "ns-obj" "munged-name"])
+        [m ns-obj munged-name] (repeatedly gensym)
         js-assign (list 'let [m (list 'meta x)
                               ns-obj (list '-> m :ns 'find-ns '.-obj)
                               munged-name (list '-> m :name 'munge)]
                     (list 'js* "~{}[~{}] = ~{}.call(null, ~{}[~{}])"
                                ns-obj munged-name f ns-obj munged-name))
+
         cljs-assign (list 'try
-                      (list 'if var-sym? with-var-sym js-assign)
+                      (if var-sym? with-var-sym js-assign)
                       (list 'catch :default (gensym)
                         throw*))]
     `(if-cljs

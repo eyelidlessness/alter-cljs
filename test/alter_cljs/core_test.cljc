@@ -73,4 +73,4 @@
   (it "alters a var passed to a function as an argument"
     (do
       (wrap-fn! #'base-fn #'inc-wrapper)
-      (should= (base-fn) 1))))
+      (should= 1 (base-fn)))))
